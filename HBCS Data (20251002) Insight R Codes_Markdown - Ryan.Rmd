@@ -1,0 +1,917 @@
+---
+title: "HBCS Data Insight"
+author: "Mak Hei Ming"
+date: "2025-11-19"
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## HBCS
+
+## Survey Feedback
+
+- Elderly respondents may not understand various terms related to antibiotic resistance and might have limited awareness of these concepts. They may claim they do not have certain conditions when, in fact, they do.​
+
+- Elderly individuals may find it challenging to fully understand their dietary requirements; for instance, they might be following a diabetes diet without realizing it.​
+
+- For Part 11, it would be beneficial to provide a clear definition of "friends."​
+
+- For Part 9 regarding eyesight, if a person claims they see normally but is wearing glasses, it would be important to confirm whether this indicates that their eyesight is actually diminished.​
+
+- For Part 10 regarding eating, if a person claims they eat normally but requires dentures, it is important to confirm whether this suggests that their eating ability is actually diminished.​
+
+- For the IADL, it may be difficult to differentiate between scores of 2 and 3.
+
+## Demographics (Baseline = 672) 
+
+```{r echo=FALSE}
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF -----------
+
+# Process the data to determine the frequency of HSS, EHC, IHF
+frequency <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%
+  group_by(A1_short) %>%
+  summarise(Frequency = n()) %>%
+  arrange(desc(Frequency))
+
+# View the frequency table
+print(frequency)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Gender Distribution -----------
+
+# Process the data to determine frequency and gender counts
+frequency_gender <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%
+  group_by(A1_short, Gender = B3) %>%
+  summarise(Frequency = n(), .groups = 'drop') %>%
+  arrange(A1_short, desc(Frequency))
+
+# Display the frequency table
+print(frequency_gender)
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# Create a new data frame for the first pie chart (HSS)
+first_pie_data <- frequency_gender %>%
+  mutate(Category = case_when(
+    A1_short == "HSS" & Gender == 0 ~ "女",  # HSS.0
+    A1_short == "HSS" & Gender == 1 ~ "男",    # HSS.1
+    A1_short == "HSS" & Gender == 2 ~ "女",  # HSS.2
+    TRUE ~ NA_character_  # Exclude other categories
+  )) %>%
+  filter(!is.na(Category)) %>%
+  group_by(Category) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_data, aes(x = "", y = Frequency, fill = Category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5) ) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Combined Categories for Second Pie Chart -----------
+
+# Create a new data frame for the second pie chart (IHF and EHC)
+second_pie_data <- frequency_gender %>%
+  mutate(Category = case_when(
+    A1_short == "IHF" & Gender == 1 ~ "男",    # IHF.1
+    A1_short == "EHC" & Gender == 1 ~ "男",    # EHC.1
+    A1_short == "IHF" & Gender == 2 ~ "女",  # IHF.2
+    A1_short == "EHC" & Gender == 2 ~ "女",  # EHC.2
+    TRUE ~ NA_character_  # Exclude other categories
+  )) %>%
+  filter(!is.na(Category)) %>%
+  group_by(Category) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_data, aes(x = "", y = Frequency, fill = Category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5) ) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Marital Status Distribution -----------
+
+# Process the data to determine the frequency of each unique value and marital status counts
+frequency_marital_status <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  
+  group_by(A1_short, Marital_Status = B11) %>%  
+  summarise(Frequency = n(), .groups = 'drop') %>%  
+  arrange(A1_short, desc(Frequency))        
+
+# Display the frequency table
+print(frequency_marital_status)
+
+# ----------- Map Numeric Values to Descriptions -----------
+
+# Define marital status labels
+marital_labels <- c(
+  "1" = "單身",      # Single
+  "2" = "已婚",      # Married
+  "3" = "離婚",      # Divorced
+  "4" = "分居",      # Separated
+  "5" = "喪偶",      # Widowed
+  "6" = "同居",      # Cohabiting
+  "7" = "不清楚"     # Not clear
+)
+
+# Create a new column with the corresponding labels
+frequency_marital_status <- frequency_marital_status %>%
+  mutate(Marital_Status = factor(Marital_Status, levels = names(marital_labels), labels = marital_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS marital status
+first_pie_marital_data <- frequency_marital_status %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Marital_Status) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_marital_data, aes(x = "", y = Frequency, fill = Marital_Status)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")), 
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC marital status
+second_pie_marital_data <- frequency_marital_status %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Marital_Status) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_marital_data, aes(x = "", y = Frequency, fill = Marital_Status)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")), 
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Age Distribution -----------
+
+# Process the data to determine the frequency of age and categorize it
+age_frequency <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3),  
+         Age_Group = case_when(         
+           B5 > 90 ~ ">90",
+           B5 >= 80 & B5 <= 90 ~ "80-90",
+           B5 >= 70 & B5 < 80 ~ "70-80",
+           B5 >= 60 & B5 < 70 ~ "60-70",
+           B5 < 60 ~ "<60",
+           TRUE ~ "Unknown"             
+         )) %>%
+  group_by(A1_short, Age_Group) %>%     
+  summarise(Frequency = n(), .groups = 'drop') %>%  
+  arrange(A1_short, desc(Frequency))   
+
+# Display the frequency table
+print(age_frequency)
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS age distribution
+first_pie_age_data <- age_frequency %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Age_Group) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_age_data, aes(x = "", y = Frequency, fill = Age_Group)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC age distribution
+second_pie_age_data <- age_frequency %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Age_Group) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_age_data, aes(x = "", y = Frequency, fill = Age_Group)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Highest Education Level Attained -----------
+
+# Process the data to determine the frequency of each unique value and education level counts
+frequency_education <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  
+  group_by(A1_short, Education_Level = B13) %>%  
+  summarise(Frequency = n(), .groups = 'drop') %>%  
+  arrange(A1_short, desc(Frequency))        
+
+# Display the frequency table
+print(frequency_education)
+
+# ----------- Map Numeric Values to Education Descriptions -----------
+
+# Define education level labels
+education_labels <- c(
+  "0" = "不懂文字",         # Illiterate
+  "1" = "從未接受教育（懂得簡單文字）",  # No education (only basic literacy)
+  "2" = "書塾",             # Kindergarten
+  "3" = "小學",             # Primary School
+  "4" = "中學",             # Secondary School
+  "5" = "大專/大學",        # College/University
+  "6" = "其他",             # Others
+  "999" = "Missing"        # Missing
+)
+
+# Create a new column with the corresponding labels
+frequency_education <- frequency_education %>%
+  mutate(Education_Level = factor(Education_Level, levels = names(education_labels), labels = education_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS education distribution
+first_pie_education_data <- frequency_education %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Education_Level) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_education_data, aes(x = "", y = Frequency, fill = Education_Level)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC education distribution
+second_pie_education_data <- frequency_education %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Education_Level) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_education_data, aes(x = "", y = Frequency, fill = Education_Level)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+```
+
+##  Demographics (Baseline = 672) 
+
+```{r echo=FALSE}
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Residence Type Distribution -----------
+
+# Process the data to determine the frequency of each unique value and residence type counts
+frequency_housing <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  # Extract the first three characters from column A1
+  group_by(A1_short, Housing_Type = C1) %>%  # Group by the shortened values and housing type from C1
+  summarise(Frequency = n(), .groups = 'drop') %>%  # Count occurrences of each unique value
+  arrange(A1_short, desc(Frequency))        # Arrange results by A1_short and frequency
+
+# Display the frequency table
+print(frequency_housing)
+
+# ----------- Map Numeric Values to Housing Descriptions -----------
+
+# Define housing type labels
+housing_labels <- c(
+  "1" = "公屋",            # Public Housing
+  "2" = "居屋",            # Home Ownership Scheme
+  "3" = "私人樓宇",        # Private Building
+  "4" = "村屋",            # Villages House
+  "5" = "其他",            # Others
+  "999" = "Missing"       # Missing
+)
+
+# Create a new column with the corresponding labels
+frequency_housing <- frequency_housing %>%
+  mutate(Housing_Type = factor(Housing_Type, levels = names(housing_labels), labels = housing_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS residence distribution
+first_pie_housing_data <- frequency_housing %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Housing_Type) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_housing_data, aes(x = "", y = Frequency, fill = Housing_Type)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC residence distribution
+second_pie_housing_data <- frequency_housing %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Housing_Type) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_housing_data, aes(x = "", y = Frequency, fill = Housing_Type)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Residence Situation Distribution -----------
+
+# Process the data to determine the frequency of each unique value and residence situation counts
+frequency_residence <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  # Extract the first three characters from column A1
+  group_by(A1_short, Residence_Situation = C5) %>%  # Group by the shortened values and residence situation from C5
+  summarise(Frequency = n(), .groups = 'drop') %>%  # Count occurrences of each unique value
+  arrange(A1_short, desc(Frequency))        # Arrange results by A1_short and frequency
+
+# Display the frequency table
+print(frequency_residence)
+
+# ----------- Map Numeric Values to Residence Situation Descriptions -----------
+
+# Define residence situation labels
+residence_labels <- c(
+  "1" = "獨居",         # Living alone
+  "2" = "同住",         # Living with others
+  "999" = "Missing"     # Missing
+)
+
+# Create a new column with the corresponding labels
+frequency_residence <- frequency_residence %>%
+  mutate(Residence_Situation = factor(Residence_Situation, levels = names(residence_labels), labels = residence_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS residence situation distribution
+first_pie_residence_data <- frequency_residence %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Residence_Situation) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_residence_data, aes(x = "", y = Frequency, fill = Residence_Situation)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC residence situation distribution
+second_pie_residence_data <- frequency_residence %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Residence_Situation) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_residence_data, aes(x = "", y = Frequency, fill = Residence_Situation)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Residence Condition Distribution -----------
+
+# Process the data to determine the frequency of each unique value and residence condition counts
+frequency_condition <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  # Extract the first three characters from column A1
+  group_by(A1_short, Residence_Condition = C7) %>%  # Group by the shortened values and residence condition from C6
+  summarise(Frequency = n(), .groups = 'drop') %>%  # Count occurrences of each unique value
+  arrange(A1_short, desc(Frequency))        # Arrange results by A1_short and frequency
+
+# Display the frequency table
+print(frequency_condition)
+
+# ----------- Map Numeric Values to Residence Condition Descriptions -----------
+
+# Define residence condition labels
+condition_labels <- c(
+  "1" = "整潔",        # Clean
+  "2" = "不整潔",      # Unclean
+  "999" = "Missing"    # Missing
+)
+
+# Create a new column with the corresponding labels
+frequency_condition <- frequency_condition %>%
+  mutate(Residence_Condition = factor(Residence_Condition, levels = names(condition_labels), labels = condition_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS residence condition distribution
+first_pie_condition_data <- frequency_condition %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Residence_Condition) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_condition_data, aes(x = "", y = Frequency, fill = Residence_Condition)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC residence condition distribution
+second_pie_condition_data <- frequency_condition %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Residence_Condition) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_condition_data, aes(x = "", y = Frequency, fill = Residence_Condition)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Government Welfare Distribution -----------
+
+# Process the data to determine the frequency of Government Welfare under each category
+frequency_government_welfare <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  # Extract the first three characters from column A1
+  group_by(A1_short, Government_Welfare = C17) %>%  # Group by the shortened values and C17 (Government Welfare)
+  summarise(Frequency = n(), .groups = 'drop') %>%  # Count occurrences of each unique value
+  arrange(A1_short, desc(Frequency))         # Arrange results by A1_short and frequency
+
+# Display the frequency table
+print(frequency_government_welfare)
+
+# ----------- Map Numeric Values to Government Welfare Descriptions -----------
+
+# Define government welfare labels
+welfare_labels <- c(
+  "1" = "綜援",                    # Comprehensive Social Security Assistance
+  "2" = "普通傷殘津貼",              # Ordinary Disability Allowance
+  "3" = "高額傷殘津貼",              # Higher Disability Allowance
+  "4" = "長者生活津貼",              # Elderly Living Allowance
+  "5" = "高齡津貼",                  # Seniority Allowance
+  "998" = "不適用"                  # Not applicable
+)
+
+# Create a new column with the corresponding labels
+frequency_government_welfare <- frequency_government_welfare %>%
+  mutate(Government_Welfare = factor(Government_Welfare, levels = names(welfare_labels), labels = welfare_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS government welfare distribution
+first_pie_welfare_data <- frequency_government_welfare %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Government_Welfare) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_welfare_data, aes(x = "", y = Frequency, fill = Government_Welfare)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC government welfare distribution
+second_pie_welfare_data <- frequency_government_welfare %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Government_Welfare) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_welfare_data, aes(x = "", y = Frequency, fill = Government_Welfare)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Outdoor Frequency Distribution -----------
+
+# Process the data to determine the frequency of Outdoor Frequency under each category
+frequency_outdoor_frequency <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  # Extract the first three characters from column A1
+  group_by(A1_short, Outdoor_Frequency = F2) %>%  # Group by the shortened values and F2 (Outdoor Frequency)
+  summarise(Frequency = n(), .groups = 'drop') %>%  # Count occurrences of each unique value
+  arrange(A1_short, desc(Frequency))         # Arrange results by A1_short and frequency
+
+# Display the frequency table
+print(frequency_outdoor_frequency)
+
+# ----------- Map Numeric Values to Outdoor Frequency Descriptions -----------
+
+# Define outdoor frequency labels
+outdoor_labels <- c(
+  "0" = "沒有",                      # None
+  "1" = "每天至少一次",              # At least once a day
+  "2" = "每星期至少一次",              # At least once a week
+  "3" = "每月至少一次",              # At least once a month
+  "999" = "missing"                  # Missing
+)
+
+# Create a new column with the corresponding labels
+frequency_outdoor_frequency <- frequency_outdoor_frequency %>%
+  mutate(Outdoor_Frequency = factor(Outdoor_Frequency, levels = names(outdoor_labels), labels = outdoor_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS outdoor frequency distribution
+first_pie_outdoor_data <- frequency_outdoor_frequency %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Outdoor_Frequency) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_outdoor_data, aes(x = "", y = Frequency, fill = Outdoor_Frequency)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC outdoor frequency distribution
+second_pie_outdoor_data <- frequency_outdoor_frequency %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Outdoor_Frequency) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_outdoor_data, aes(x = "", y = Frequency, fill = Outdoor_Frequency)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+
+
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean the dataset to keep only the row with the smallest A3a, A3b, and A3c for duplicated B1 values
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Print the cleaned dataset
+print(cleaned_data)
+
+# ----------- Frequency Analysis of HSS, EHC, IHF and Outdoor Autonomy Distribution -----------
+
+# Process the data to determine the frequency of Outdoor Autonomy under each category
+frequency_outdoor_frequency_F3 <- cleaned_data %>%
+  mutate(A1_short = substr(A1, 1, 3)) %>%  # Extract the first three characters from column A1
+  group_by(A1_short, Outdoor_Autonomy = F3) %>%  # Group by the shortened values and F3 (Outdoor Autonomy)
+  summarise(Frequency = n(), .groups = 'drop') %>%  # Count occurrences of each unique value
+  arrange(A1_short, desc(Frequency))         # Arrange results by A1_short and frequency
+
+# Display the frequency table
+print(frequency_outdoor_frequency_F3)
+
+# ----------- Map Numeric Values to Outdoor Autonomy Descriptions -----------
+
+# Define outdoor autonomy labels
+autonomy_labels <- c(
+  "1" = "自行外出",         # Can go out independently
+  "2" = "需要陪同",         # Needs accompaniment
+  "999" = "missing"         # Missing
+)
+
+# Create a new column with the corresponding labels
+frequency_outdoor_frequency_F3 <- frequency_outdoor_frequency_F3 %>%
+  mutate(Outdoor_Autonomy = factor(Outdoor_Autonomy, levels = names(autonomy_labels), labels = autonomy_labels))
+
+# ----------- Create Combined Categories for Pie Charts -----------
+
+# For the first pie chart: HSS outdoor autonomy distribution
+first_pie_autonomy_data <- frequency_outdoor_frequency_F3 %>%
+  filter(A1_short == "HSS") %>%
+  group_by(Outdoor_Autonomy) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the first pie chart
+ggplot(first_pie_autonomy_data, aes(x = "", y = Frequency, fill = Outdoor_Autonomy)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "普通個案") +
+  theme_void()  # Clean up the theme
+
+# ----------- Create Second Pie Chart for IHF and EHC -----------
+
+# For the second pie chart: IHF and EHC outdoor autonomy distribution
+second_pie_autonomy_data <- frequency_outdoor_frequency_F3 %>%
+  filter(A1_short %in% c("IHF", "EHC")) %>%
+  group_by(Outdoor_Autonomy) %>%
+  summarise(Frequency = sum(Frequency), .groups = 'drop')
+
+# Create the second pie chart
+ggplot(second_pie_autonomy_data, aes(x = "", y = Frequency, fill = Outdoor_Autonomy)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(Frequency / sum(Frequency) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +  # Add percentage text to pie slices
+  labs(title = "體弱個案") +
+  theme_void()  # Clean up the theme
+```
+
+## Disease Prevalence  (Baseline = 672) 
+
+```{r echo=FALSE}
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+# Clean and prepare the data
+cleaned_data <- HBCS_data_20251002 %>%
+  group_by(B1) %>%
+  filter(n() > 1) %>%
+  arrange(A3a, A3b, A3c) %>%
+  slice(1) %>%
+  ungroup() %>%
+  bind_rows(HBCS_data_20251002 %>% filter(!B1 %in% B1[duplicated(B1)]))
+
+# Process the data to determine the prevalence of each disease
+calculate_disease_prevalence <- function(data, illness_var, illness_name) {
+  data %>%
+    mutate(A1_short = substr(A1, 1, 3)) %>%
+    group_by(A1_short) %>%
+    summarise(
+      普通個案 = sum(ifelse(!!sym(illness_var) %in% c(1, 2), 1, 0) * (A1_short == "HSS")),
+      體弱個案 = sum(ifelse(!!sym(illness_var) %in% c(1, 2), 1, 0) * (A1_short %in% c("IHF", "EHC"))),
+      .groups = 'drop'
+    ) %>%
+    summarise(
+      普通個案 = sum(普通個案),  # Total for 普通個案
+      體弱個案 = sum(體弱個案),       # Total for 體弱個案
+      Illness = illness_name
+    )
+}
+
+# Calculate disease prevalence for each condition
+frequency_blood_pressure <- calculate_disease_prevalence(cleaned_data, "E1a", "高血壓")
+frequency_cognitive_impairment <- calculate_disease_prevalence(cleaned_data, "E1b", "認知障礙症")
+frequency_gout <- calculate_disease_prevalence(cleaned_data, "E1c", "痛風症")
+frequency_ear_balance <- calculate_disease_prevalence(cleaned_data, "E1d", "耳水不平衡")
+frequency_anemia <- calculate_disease_prevalence(cleaned_data, "E1e", "貧血")
+frequency_diabetes <- calculate_disease_prevalence(cleaned_data, "E1f", "糖尿病")
+frequency_osteoporosis <- calculate_disease_prevalence(cleaned_data, "E1g", "骨質疏鬆症")
+frequency_parkinsons <- calculate_disease_prevalence(cleaned_data, "E1h", "柏金遜症")
+frequency_kidney_disease <- calculate_disease_prevalence(cleaned_data, "E1i", "腎病")
+frequency_high_cholesterol <- calculate_disease_prevalence(cleaned_data, "E1j", "高膽固醇")
+frequency_stroke <- calculate_disease_prevalence(cleaned_data, "E1k", "中風")
+frequency_arthritis <- calculate_disease_prevalence(cleaned_data, "E1l", "關節炎")
+frequency_lung_disease <- calculate_disease_prevalence(cleaned_data, "E1m", "肺病")
+frequency_tracheal_disease <- calculate_disease_prevalence(cleaned_data, "E1n", "氣管病")
+frequency_heart_disease <- calculate_disease_prevalence(cleaned_data, "E1o", "心臟病")
+frequency_eye_disease <- calculate_disease_prevalence(cleaned_data, "E1p", "眼疾")
+frequency_mental_illness <- calculate_disease_prevalence(cleaned_data, "E1q", "精神病")
+frequency_cancer <- calculate_disease_prevalence(cleaned_data, "E1r", "癌症")
+frequency_physical_disability <- calculate_disease_prevalence(cleaned_data, "E1t", "肢體傷殘")
+frequency_pain_symptoms <- calculate_disease_prevalence(cleaned_data, "E1w", "痛症")
+frequency_skin_disease <- calculate_disease_prevalence(cleaned_data, "E1x", "皮膚病")
+
+# Combine the results into a single data frame
+all_frequencies <- bind_rows(
+  frequency_blood_pressure,
+  frequency_cognitive_impairment,
+  frequency_gout,
+  frequency_ear_balance,
+  frequency_anemia,
+  frequency_diabetes,
+  frequency_osteoporosis,
+  frequency_parkinsons,
+  frequency_kidney_disease,
+  frequency_high_cholesterol,
+  frequency_stroke,
+  frequency_arthritis,
+  frequency_lung_disease,
+  frequency_tracheal_disease,
+  frequency_heart_disease,
+  frequency_eye_disease,
+  frequency_mental_illness,
+  frequency_cancer,
+  frequency_physical_disability,
+  frequency_pain_symptoms,
+  frequency_skin_disease
+)
+
+# Prepare data for plotting
+plot_data <- all_frequencies %>%
+  pivot_longer(c(普通個案, 體弱個案), names_to = "Category", values_to = "Count")
+
+# Plot the bar graph
+ggplot(plot_data, aes(x = Illness, y = Count, fill = Category)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = Count), position = position_dodge(0.9), vjust = -0.5, size = 3) +  # Smaller font size
+  coord_flip() + # Flip coordinates for better readability
+  labs(title = "疾病流行率按類別", x = "疾病", y = "數量") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))```
+
