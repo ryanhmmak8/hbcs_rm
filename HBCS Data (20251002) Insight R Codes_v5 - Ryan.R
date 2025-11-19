@@ -785,6 +785,7 @@ ggplot(second_pie_autonomy_data, aes(x = "", y = Frequency, fill = Outdoor_Auton
 # Load required packages
 library(dplyr)
 library(ggplot2)
+library(tidyr)  # Make sure tidyr is loaded for pivot_longer
 
 # Clean and prepare the data
 cleaned_data <- HBCS_data_20251002 %>%
@@ -801,13 +802,13 @@ calculate_disease_prevalence <- function(data, illness_var, illness_name) {
     mutate(A1_short = substr(A1, 1, 3)) %>%
     group_by(A1_short) %>%
     summarise(
-      普通個案 = sum(ifelse(!!sym(illness_var) %in% c(1, 2), 1, 0) * (A1_short == "HSS")),
-      體弱個案 = sum(ifelse(!!sym(illness_var) %in% c(1, 2), 1, 0) * (A1_short %in% c("IHF", "EHC"))),
+      normal_case = sum(ifelse(!!sym(illness_var) %in% c(1, 2), 1, 0) * (A1_short == "HSS")),
+      weak_case = sum(ifelse(!!sym(illness_var) %in% c(1, 2), 1, 0) * (A1_short %in% c("IHF", "EHC")), na.rm = TRUE),
       .groups = 'drop'
     ) %>%
     summarise(
-      普通個案 = sum(普通個案),  # Total for 普通個案
-      體弱個案 = sum(體弱個案),       # Total for 體弱個案
+      total_normal = sum(normal_case, na.rm = TRUE), 
+      total_weak = sum(weak_case, na.rm = TRUE), 
       Illness = illness_name
     )
 }
@@ -862,7 +863,7 @@ all_frequencies <- bind_rows(
 
 # Prepare data for plotting
 plot_data <- all_frequencies %>%
-  pivot_longer(c(普通個案, 體弱個案), names_to = "Category", values_to = "Count")
+  pivot_longer(c(total_normal, total_weak), names_to = "Category", values_to = "Count")  # Ensure valid column names
 
 # Plot the bar graph
 ggplot(plot_data, aes(x = Illness, y = Count, fill = Category)) +
